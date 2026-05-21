@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Environment — never commit secrets
+.env
+
+# Uploaded CVs (user data, not source code)
+uploads/*
+!uploads/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log

@@ -72,7 +72,7 @@ jobs:
           script: |
             set -e
 
-            mkdir -p /opt/gl-backend/uploads
+            mkdir -p "$HOME/gl-backend/uploads"
 
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
@@ -96,7 +96,7 @@ jobs:
               -e JWT_SECRET="$JWT_SECRET" \
               -e JWT_EXPIRES_IN="$JWT_EXPIRES_IN" \
               -e FRONTEND_URL="$FRONTEND_URL" \
-              -v /opt/gl-backend/uploads:/app/uploads \
+              -v "$HOME/gl-backend/uploads:/app/uploads" \
               "$IMAGE_REF"
 
             docker image prune -f

@@ -50,34 +50,33 @@ jobs:
     steps:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          IMAGE_REF: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSL: ${{ secrets.DB_SSL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
+          envs: IMAGE_REF,GHCR_USERNAME,GHCR_PAT,DB_HOST,DB_PORT,DB_NAME,DB_USER,DB_PASSWORD,DB_SSL,JWT_SECRET,JWT_EXPIRES_IN,FRONTEND_URL
           script: |
             set -e
 
             mkdir -p /opt/gl-backend/uploads
 
-            cat > /opt/gl-backend/.env <<'ENVEOF'
-            NODE_ENV=production
-            PORT=4000
-            DB_HOST=${{ secrets.DB_HOST }}
-            DB_PORT=${{ secrets.DB_PORT }}
-            DB_NAME=${{ secrets.DB_NAME }}
-            DB_USER=${{ secrets.DB_USER }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            DB_SSL=${{ secrets.DB_SSL }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}
-            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-            ENVEOF
-            chmod 600 /opt/gl-backend/.env
+            echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
-
-            docker pull ghcr.io/${{ github.repository }}:${{ github.sha }}
+            docker pull "$IMAGE_REF"
 
             docker stop gl-api 2>/dev/null || true
             docker rm gl-api 2>/dev/null || true
@@ -86,8 +85,18 @@ jobs:
               --name gl-api \
               --restart unless-stopped \
               --network host \
-              --env-file /opt/gl-backend/.env \
+              -e NODE_ENV=production \
+              -e PORT=4000 \
+              -e DB_HOST="$DB_HOST" \
+              -e DB_PORT="$DB_PORT" \
+              -e DB_NAME="$DB_NAME" \
+              -e DB_USER="$DB_USER" \
+              -e DB_PASSWORD="$DB_PASSWORD" \
+              -e DB_SSL="$DB_SSL" \
+              -e JWT_SECRET="$JWT_SECRET" \
+              -e JWT_EXPIRES_IN="$JWT_EXPIRES_IN" \
+              -e FRONTEND_URL="$FRONTEND_URL" \
               -v /opt/gl-backend/uploads:/app/uploads \
-              ghcr.io/${{ github.repository }}:${{ github.sha }}
+              "$IMAGE_REF"
 
             docker image prune -f
